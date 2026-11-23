@@ -1,0 +1,35 @@
+calligraphy-title-poster
+Copyright 2026 calligraphy-title-poster contributors
+
+This repository contains source code and documentation licensed under the
+Apache License, Version 2.0 (see LICENSE). It does NOT contain any model
+weights, checkpoints, LoRAs or Ollama models.
+
+Model and third-party notices
+-----------------------------
+
+1. Qwen-Image 2.1 / Qwen-Image 2.1 turbo
+   The weights are distributed by Qwen under the Qwen Research License
+   Agreement, not under Apache-2.0. The public license permits research and
+   evaluation use only; commercial use requires a separate commercial license
+   from Qwen (or use of the official hosted API). This repository only
+   references the model by filename and does not redistribute it.
+
+2. Qwen3.5 / Qwen3-VL (Ollama models)
+   Downloaded and run through Ollama. Each model is governed by its own model
+   card and license. This repository does not redistribute these weights.
+
+3. MiniMax H3 (optional writing-video feature)
+   Optional, disabled by default. Weights are not included. See the model
+   card for its license before use.
+
+4. Reference and sample images
+   The brush-reference images under assets/ and the generated examples under
+   examples/ and docs/assets/ are provided for demonstration and evaluation
+   only. Rights in the underlying photographs, if any, remain with their
+   respective owners. Do not use them commercially without clearing rights.
+
+5. Generated outputs
+   Outputs produced by running this code are subject to the terms of the
+   models used to generate them. The Apache-2.0 license of this repository
+   does not grant any rights to model weights or to third-party imagery.

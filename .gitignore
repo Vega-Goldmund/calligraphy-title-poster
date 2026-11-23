@@ -1,0 +1,19 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# runtime output
+workbench/jobs.json
+workbench/logs/
+workbench/uploads/
+workbench/outputs/
+batch_result.json
+random_result.json
+
+# model weights (never commit)
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+*.onnx
