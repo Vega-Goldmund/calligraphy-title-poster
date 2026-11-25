@@ -56,6 +56,8 @@ def main():
     ap.add_argument("--vertical", action="store_true")
     ap.add_argument("--size", type=_parse_size, default=None)
     ap.add_argument("--font", default=C.FONT_KEY, choices=list(C.TPLS))
+    ap.add_argument("--style", choices=list(C.STYLES), default=None,
+                    help="版式：neat 整齐版（默认）/ ink 浓淡版")
     ap.add_argument("--fresh", action="store_true")
     ap.add_argument("--verify", action="store_true")
     ap.add_argument("--film", action="store_true")
@@ -82,10 +84,15 @@ def main():
                     help="透明文字颜色 hex（仅 --alpha 有效），默认暖米白")
     ap.add_argument("--seed", type=int, default=0,
                     help="透明文字随机种子（仅 --alpha 有效），默认按时间")
+    ap.add_argument("--ink-rhythm", action="store_true",
+                    help="旧写法，等价于 --style ink")
     ap.add_argument("--skip-check", action="store_true")
     ap.add_argument("--force", action="store_true")
     a = ap.parse_args()
 
+    if a.ink_rhythm and a.style == C.STYLE_NEAT:
+        ap.error("--ink-rhythm 等价于 --style ink，不能同时指定 --style neat")
+    style = a.style or (C.STYLE_INK if a.ink_rhythm else C.DEFAULT_STYLE)
     size = a.size or ((864, 1536) if a.vertical else (1536, 864))
 
     if not a.skip_check and not _preflight_ok(a.force):
@@ -103,7 +110,8 @@ def main():
     # 透明背景文字：独立功能，不画背景、不调导演
     if a.alpha:
         import transparent_text as TT
-        r = TT.generate(a.text, seed=a.seed, size=size, color=a.color, font=a.font)
+        r = TT.generate(a.text, seed=a.seed, size=size, color=a.color, font=a.font,
+                        style=style)
         print("\n===== 透明文字结果 =====")
         print("状态:", r["status"], " 颜色:", r["color"], " 文件:", r.get("dst") or "")
         return 0 if r.get("dst") else 1
@@ -114,7 +122,7 @@ def main():
         r = redraw.redraw(a.text, a.base, a.hint, size=size, denoise=a.denoise,
                           font=a.font, mode=a.mode,
                           subtitle=sub_flag, cursive=not a.dignified,
-                          use_cache=not a.fresh)
+                          use_cache=not a.fresh, style=style)
         dst = r.get("dst")
         print("\n===== 重绘结果 =====")
         print("模式:", r.get("mode", a.mode), " 状态:", r["status"], " 文件:", dst or "")
@@ -127,13 +135,15 @@ def main():
 
     if a.combo:
         results = single.render_set(a.text, a.hint, k=a.combo, size=size,
-                                    use_cache=not a.fresh, font=a.font)
+                                    use_cache=not a.fresh, font=a.font,
+                                    style=style)
         paths = [r.get("dst") for r in results if r.get("dst")]
         print("\n===== 多方案出图 =====\n" + "\n".join(p for p in paths if p))
         return 0 if paths else 1
 
     r = single.stable_render(a.text, a.hint, size=size,
-                             use_cache=not a.fresh, font=a.font)
+                             use_cache=not a.fresh, font=a.font,
+                             style=style)
     dst = r["dst"]
     print("\n===== 出图结果 =====")
     print("状态:", r["status"], " 文件:", dst)

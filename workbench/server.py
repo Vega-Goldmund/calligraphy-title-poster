@@ -80,8 +80,9 @@ def http_json(url, timeout=3):
         return None
 
 
-COMFY_CANDIDATES = ["http://127.0.0.1:8188", "http://127.0.0.1:8189",
-                    "http://127.0.0.1:8187", "http://127.0.0.1:8190"]
+COMFY_CANDIDATES = ["http://127.0.0.1:8188", "http://127.0.0.1:8191",
+                    "http://127.0.0.1:8189", "http://127.0.0.1:8187",
+                    "http://127.0.0.1:8190"]
 _SYNC = {"url": "", "t": 0.0}
 _ENV = {"t": 0.0, "v": None}
 

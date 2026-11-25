@@ -1,3 +1,24 @@
+## Unreleased
+
+### Added
+
+- 两套正式版式接口：`--style neat`（整齐版，默认）与 `--style ink`（浓淡版），`single` / `redraw` / `alpha` / `run.py` / 工作台全部接通。
+- Python 侧 `stable_render_neat` / `stable_render_ink`，以及 `redraw_neat` / `redraw_ink` 包装；核心函数统一接受 `style="neat" | "ink"`。
+- 工作台新增「05 墨版」区块，选择写入任务参数并持久化到 `localStorage`。
+- 5 组本地 A/B（2 / 4 / 7 / 10 / 18 字）；产物保留在 ComfyUI 输出目录，不入库。
+
+### Changed
+
+- `--ink-rhythm` 保留为旧写法，等价于 `--style ink`；与 `--style neat` 同时使用会直接报错。
+- `config.resolve_style()` 统一解析：`style` 优先，`ink_rhythm=True` 兜底为 `ink`，默认取 `config.DEFAULT_STYLE`（当前 `neat`）。
+- `config.DEFAULT_STYLE` 可一处切换全局默认版式，不必改各个 CLI。
+- 工作台 ComfyUI 候选端口补入 `8191`，主实例 8188 卡死时可自动落到备用实例。
+
+### Known issues
+
+- 7 字金色底案例在浓淡版下仍可能首字过重、其余偏淡；建议先小批量试。
+- `alpha` 的浓淡版只做过 2 字冒烟，笔画比整齐版更厚，未纳入 5 组 A/B。
+
 # v0.1.0 · 2026-11-23
 
 首个公开版本。把项目从个人 Skill 包整理成可独立运行的仓库。

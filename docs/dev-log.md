@@ -599,3 +599,32 @@ Qwen-Image 2.1 的 VAE 是四通道，透明背景由模型直接生成在 alpha
 - 解压到临时目录做**冷启动自验**：9 个模块（config / single / redraw / subtitle / transparent_text / write_video / director / quality / preflight）全部 import 成功；`subtitle.HAS_PINYIN=True`、默认 `SUBTITLE_FORCE=False`；`run.py` 源码里搜不到 `write_video`——视频确认不进默认路径。
 - SKILL.md 补了三块：副标章节（默认不出、程序生成、pypinyin 依赖）、Python 依赖（缺 pypinyin 不影响其它功能）、已知限制（黑白混用、重绘装饰跑偏、尺寸回裁）。
 
+## 二十、ink-rhythm：给笔画加提按与浓淡（默认关闭）
+
+起因是一句外部评价：“笔画偏平，缺少浓淡变化。”对照成图后，这个判断有六七分成立：`惊蛰` 有主次，但青色笔画内部明度、宽度都比较均匀；`稻花香里说丰年` 金色字整体顺滑，同一明度、同一笔触感偏长，更像精致笔刷。根因不是模型不会写重笔，而是提示词为了压“发光/黑墨”，一直强调“细瘦、缠绕”，把重按和墨块一起压掉了。
+
+这次没有推翻默认，只加了一个 `ink_rhythm=False` 的 opt-in 分支。`config.INK_RHYTHM_LINES` 追加三条：每个字内部至少一处重按、一处提起；重按仍是原字色、只是更浓更厚实；每个字只压重一到两笔，重笔分散、整组浓度接近。`single.brief` / `redraw.redraw_brief` 在开关打开时，把三处会压平层次的硬约束换成同色浓淡版本：细劲为主但提按分明；干丝是同一字色的淡墨；最宽一笔可以在同一色相内更深，最浓处仍透出飞白。默认路径一字未改。
+
+A/B 用 2/4/7/10/18 字五组，同规格、同 seed，只切开关。结果：2 字「惊蛰」浓淡成立，但「蛰」偏淡；4 字「人间值得」起笔重、收笔细，四字清楚；7 字「稻花香里说丰年」七字全对、无发光、锚点在，但首字「稻」深金重压、其余六字偏淡，浓度不均；10 字「人间烟火气最抚凡人心」白色字有粗有细，最接近真迹感；18 字长句全对、无重复、无发光，首字「从」重、其余保持蓝绿。像素差异 13.7–22.6 mean abs，证明不是同一张图。
+
+结论：`ink-rhythm` 可以做出可见的提按/浓淡，但还不是默认产线的替代品；7 字金色案例需要换 seed 复验，长任务仍需人工核对。默认继续保持关闭，README 与 CHANGELOG 已写明开关和已知问题。
+
+## 二十一、把实验开关拆成两个正式接口：整齐版 / 浓淡版
+
+A/B 交付后，用户看完对照的反馈是：「后面一版感觉好点，能不能做成两种接口，整齐版和浓淡版。」这句话同时确认了两件事：浓淡方向值得保留；但它不该继续以一个藏在 CLI 深处的实验开关存在。
+
+于是把「开关」提升为「版式」：
+
+- `neat` = 整齐版：v0.1.0 的细劲、缠绕、整组同亮度，继续做默认；
+- `ink` = 浓淡版：原来的 `ink_rhythm=True` 路径，字内提按、同色浓淡；
+- `config.STYLES = (neat, ink)`、`STYLE_LABELS` 与 `resolve_style()` 做统一解析，`style` 优先，旧 `ink_rhythm=True` 兜底成 `ink`，都为空则 `neat`；
+- `single` 的 `brief / render / _render_with_spec / stable_render / render_set / render_one` 全部带 `style`，另加 `stable_render_neat` / `stable_render_ink` 两个 Python 入口；
+- `redraw` 同步加 `style` 与 `redraw_neat` / `redraw_ink`；`transparent_text` 的 `alpha_prompt / generate` 也接受 `style`；
+- `run.py` 主入口改用 `--style neat|ink`，`--ink-rhythm` 保留为兼容写法，和 `--style neat` 同时出现时直接报错，避免「嘴上说整齐、实际开浓淡」的静默错配；
+- 工作台在「笔法」之后新增 `05 墨版` 区块，两个 chip 写入任务参数 `style`，并随表单持久化。
+
+默认仍选整齐版，理由不是审美，而是稳定性：五组 A/B 里 7 字金色案例在浓淡版下首字过重、其余偏淡；整齐版没有这个结构性风险。浓淡版作为明确可选项，交给用户按文本长度、底色和字色决定。默认收口到 `config.DEFAULT_STYLE`，将来想全局改成浓淡版，只动这一行，不用改四个 CLI。
+
+验收用「惊蛰」、同一份导演缓存、同一 seed 325399，仅切 `style`：两张图 mean abs 22.15，76.4% 像素超过阈值；整齐版整组墨色更实，浓淡版「惊」重、「蛰」转淡，差异肉眼可见。产物在 `D:\ComfyUI\output\projects\title_generator\style_interfaces`，不影响仓库。
+
+

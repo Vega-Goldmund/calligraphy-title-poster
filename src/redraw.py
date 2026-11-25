@@ -25,6 +25,7 @@ import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import config as C
+from config import INK_RHYTHM_LINES
 import comfy_client as CC
 import director as D
 import single as S
@@ -285,8 +286,9 @@ def _adapt_dark(hexstr, l=0.86, s=0.18):
     return out, "接近白的浅色"
 
 
-def redraw_brief(spec, text, orient="横版", luma=None):
+def redraw_brief(spec, text, orient="横版", luma=None, ink_rhythm=False, style=None):
     """重绘专用提示词：字的部分与原管线同源，背景部分换成「保留锚点」。"""
+    ink_rhythm = C.resolve_style(style, ink_rhythm)
     L = spec.get("layout") or {}
     F = spec.get("font_design") or {}
     M = spec.get("morph") or {}
@@ -343,19 +345,34 @@ def redraw_brief(spec, text, orient="横版", luma=None):
             parts.append(D._clean(F["stroke"]))
     else:
         parts.append(f"在照片的留白处写上「{text}」这一整句，恰好 {n} 个字、一字不少也不多写、不要标点，整句读得出、不许缺字、不许重复或额外加字，写完这 {n} 个字立即停笔")
-        parts.append("毛笔在纸上快速挥写的整幅狂草，不是马克笔、秀丽笔或现代文艺体，"
-                     "整组以细劲线条为绝对主调、笔画瘦而利，不要实心填充、不要粗细均匀的光滑笔画、不要圆润粗壮的设计字体")
+        if ink_rhythm:
+            parts.append("毛笔在纸上快速挥写的整幅狂草，不是马克笔、秀丽笔或现代文艺体，"
+                         "整组以细劲线条为主，但提按分明：重按处铺开成较宽的实笔，提起处收成细线，"
+                         "不要整组一样细、不要粗细均匀的光滑笔画、不要圆润粗壮的设计字体")
+        else:
+            parts.append("毛笔在纸上快速挥写的整幅狂草，不是马克笔、秀丽笔或现代文艺体，"
+                         "整组以细劲线条为绝对主调、笔画瘦而利，不要实心填充、不要粗细均匀的光滑笔画、不要圆润粗壮的设计字体")
         parts.append("字与字大胆缠绕连写：上字收笔直接牵出细丝连到下字起笔，多字可以一笔连写、牵丝不断，"
                      "看得见的细牵丝把整组连成一条连绵气脉，允许连写简化、字与字挨近呼应、互相穿插，"
                      "不要写成一个个分开的字，只要整句读得出即可")
-        parts.append("大量干笔飞白：笔毫散开干扫，部分笔画甚至整字由一组平行细丝组成、中间大量露出背景，"
-                     "边缘毛涩断续；干丝依然是字的颜色、明亮，不发灰发黑")
+        if ink_rhythm:
+            parts.append("大量干笔飞白：笔毫散开干扫，部分笔画甚至整字由一组平行细丝组成、中间大量露出背景，"
+                         "边缘毛涩断续；干丝比湿笔更浅、更透，是同一字色的淡墨，不是灰糊、不是黑块")
+        else:
+            parts.append("大量干笔飞白：笔毫散开干扫，部分笔画甚至整字由一组平行细丝组成、中间大量露出背景，"
+                         "边缘毛涩断续；干丝依然是字的颜色、明亮，不发灰发黑")
+        if ink_rhythm:
+            parts.extend(INK_RHYTHM_LINES)
         if F.get("cursive_flow"):
             parts.append(D._clean(F["cursive_flow"]))
         if F.get("stroke"):
             parts.append(D._clean(F["stroke"]))
         parts.append("字势倾斜、大小欹侧、疏密肆意，主字放大、虚词小而细，整组不要一样大")
-        parts.append("字色铁律：哪怕最宽最显眼的一笔，也和细游丝同色同亮，宽只是形状铺开、绝不是黑或灰，全图没有黑字")
+        if ink_rhythm:
+            parts.append("字色铁律：整组仍是一个字色系，但必须有浓淡——重按处是同一色相更浓、更厚实，提起处是同一色相更淡、更透，"
+                         "深与浅之间连续过渡，不是两种颜色；最浓处仍透出飞白与纸纹，不许糊成一整块，也不是灰糊墨团")
+        else:
+            parts.append("字色铁律：哪怕最宽最显眼的一笔，也和细游丝同色同亮，宽只是形状铺开、绝不是黑或灰，全图没有黑字")
         if L.get("emphasis"):
             parts.append(D._clean(L["emphasis"]))
         if L.get("scale"):
@@ -390,7 +407,11 @@ def redraw_brief(spec, text, orient="横版", luma=None):
         line = f"整组字统一为{cname}"
         if soft_hex:
             line += f" {soft_hex}"
-        line += "，所有笔画都是这个颜色、偏灰不刺眼，深色只是飞白阴影、不是字色，不许出现黑字或第二种颜色"
+        if ink_rhythm:
+            line += f"，所有笔画仍属于这个颜色、偏灰不刺眼，只有同色浓淡：重按处是{cname}的浓色版本（同色相加深，不是另一色），" \
+                    "提起处更浅更透；最浓处仍透出飞白，不许糊成一整块或灰糊墨团"
+        else:
+            line += "，所有笔画都是这个颜色、偏灰不刺眼，深色只是飞白阴影、不是字色，不许出现黑字或第二种颜色"
         parts.append(line)
         if dark or had_glow:
             parts.append("这个颜色要压掉荧光感：它是亚光颜料混进环境里的颜色，不是屏幕发光色，不要霓虹、不要光晕辉光、不要外发光")
@@ -483,7 +504,7 @@ def _wf_redraw(prompt, seed, w, h, prefix, ref, base_img, sigmas):
 
 def redraw(text, base, hint="", seed=0, size=(1536, 864), denoise=0.90,
            font="cursive", dry=False, reuse_spec=None, subtitle=None, mode="recompose",
-           cursive=True, use_cache=True):
+           cursive=True, use_cache=True, ink_rhythm=False, style=None):
     """识别 + 设计 + 出图。返回 dict(dst/spec/prompt/seed/status)。
 
     cursive=True（默认）强制走整幅狂草；导演有时会把「新时代伟大变革」这类宏大命题
@@ -518,7 +539,7 @@ def redraw(text, base, hint="", seed=0, size=(1536, 864), denoise=0.90,
 
     seed = seed or int(time.time()) % 1000000
     p = redraw_brief(spec, text, "竖版" if size[1] > size[0] else "横版",
-                     luma=_base_luma(base))
+                     luma=_base_luma(base), ink_rhythm=ink_rhythm, style=style)
     print("[prompt]", p)
     if dry:
         return dict(dst=None, spec=spec, prompt=p, seed=seed, status="dry")
@@ -553,6 +574,18 @@ def redraw(text, base, hint="", seed=0, size=(1536, 864), denoise=0.90,
     return dict(dst=None, spec=spec, prompt=p, seed=seed, status="failed")
 
 
+def redraw_neat(text, base, hint="", **kwargs):
+    """整齐版接口：等价于 style="neat"。"""
+    kwargs["style"] = C.STYLE_NEAT
+    return redraw(text, base, hint, **kwargs)
+
+
+def redraw_ink(text, base, hint="", **kwargs):
+    """浓淡版接口：等价于 style="ink"。"""
+    kwargs["style"] = C.STYLE_INK
+    return redraw(text, base, hint, **kwargs)
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("text")
@@ -566,14 +599,22 @@ if __name__ == "__main__":
     ap.add_argument("--size", default="1536x864")
     ap.add_argument("--font", default="cursive", choices=list(C.TPLS))
     ap.add_argument("--dry", action="store_true", help="只识别和设计，不出图")
+    ap.add_argument("--style", choices=list(C.STYLES), default=None,
+                    help="版式：neat 整齐版（默认）/ ink 浓淡版")
+    ap.add_argument("--ink-rhythm", action="store_true",
+                    help="旧写法，等价于 --style ink")
     ap.add_argument("--subtitle", dest="subtitle", action="store_true", default=None,
                     help="强制加拼音副标（默认 8 字以上自动关闭）")
     ap.add_argument("--no-subtitle", dest="subtitle", action="store_false",
                     help="强制不加副标，只留几何装饰")
     a = ap.parse_args()
+    if a.ink_rhythm and a.style == C.STYLE_NEAT:
+        ap.error("--ink-rhythm 等价于 --style ink，不能同时指定 --style neat")
+    style = a.style or (C.STYLE_INK if a.ink_rhythm else C.DEFAULT_STYLE)
     w, h = (int(x) for x in a.size.lower().split("x"))
     r = redraw(a.text, a.base, a.hint, a.seed, (w, h), a.denoise,
-               font=a.font, dry=a.dry, subtitle=a.subtitle, mode=a.mode)
+               font=a.font, dry=a.dry, subtitle=a.subtitle, mode=a.mode,
+               style=style)
     if a.dry:
         print("\n[元素清单]")
         print(json.dumps(r["spec"].get("element_sheet", {}), ensure_ascii=False, indent=2))

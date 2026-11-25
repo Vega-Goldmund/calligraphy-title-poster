@@ -84,11 +84,15 @@ def main():
     font = a.get("font") or "cursive"
     seed = int(a.get("seed") or 0)
     hint = a.get("hint") or ""
+    style = a.get("style") or (C.STYLE_INK if a.get("inkRhythm") else C.DEFAULT_STYLE)
+    if style not in C.STYLES:
+        raise SystemExit("未知版式: %s" % style)
     t0 = time.time()
 
     print("== 工作台任务 ==", flush=True)
-    print("路由: %s | 文字: %s | 尺寸: %dx%d | 风格: %s | 种子: %s"
-          % (route, text, size[0], size[1], font, seed or "随机"), flush=True)
+    print("路由: %s | 文字: %s | 尺寸: %dx%d | 风格: %s | 版式: %s | 种子: %s"
+          % (route, text, size[0], size[1], font, C.STYLE_LABELS.get(style, style),
+             seed or "随机"), flush=True)
 
     # 副标口径：默认关；开了就由 subtitle.py 程序生成
     single.SUBTITLE_FORCE = bool(a.get("sub"))
@@ -105,7 +109,7 @@ def main():
             print("[多方案] %d 套" % combo, flush=True)
             unload()
             outs = single.render_set(text, hint, k=combo, size=size,
-                                     use_cache=not fresh, font=font)
+                                     use_cache=not fresh, font=font, style=style)
             for i, o in enumerate(outs):
                 if o.get("dst"):
                     print("[方案%d] %s" % (i + 1, o.get("label") or ""), flush=True)
@@ -122,7 +126,7 @@ def main():
                 unload()
                 sd = seed or int(time.time() * 1000) % 1000000
                 print("[出图 · seed %d]" % sd, flush=True)
-                dst, p = single._render_with_spec(spec, text, sd, size, font)
+                dst, p = single._render_with_spec(spec, text, sd, size, font, style=style)
                 if dst:
                     out_path(dst)
                 emit(seed=sd)
@@ -135,14 +139,14 @@ def main():
                      font=font, mode=(a.get("mode") or "recompose"),
                      subtitle=bool(a.get("sub")),
                      cursive=not a.get("dignified"),
-                     use_cache=bool(a.get("cache", True)))
+                     use_cache=bool(a.get("cache", True)), style=style)
         if r.get("dst"):
             out_path(r["dst"])
         emit(seed=r.get("seed"))
 
     elif route == "alpha":
         r = TT.generate(text, seed=seed, size=size,
-                        color=a.get("color") or TT.DEFAULT_COLOR, font=font)
+                        color=a.get("color") or TT.DEFAULT_COLOR, font=font, style=style)
         if r.get("dst"):
             out_path(r["dst"])
         emit(seed=r.get("seed"))

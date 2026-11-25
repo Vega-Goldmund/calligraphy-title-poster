@@ -13,6 +13,8 @@
 import argparse, json, os, shutil, sys, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import config as C
+import config as _CFG
+from config import INK_RHYTHM_LINES
 import comfy_client as CC
 import director as D
 
@@ -29,8 +31,12 @@ def _first_sentence(s):
     return s.strip()
 
 
-def brief(spec, text, orientation="横版"):
-    """把规格压成一段短提示词。默认按「整幅狂草」组织，端庄场合才走独立单字。"""
+def brief(spec, text, orientation="横版", ink_rhythm=False, style=None):
+    """把规格压成一段短提示词。默认按「整幅狂草」组织，端庄场合才走独立单字。
+
+    style="neat" 为整齐版（默认），style="ink" 为浓淡版；
+    ink_rhythm=True 是旧写法，等价于 style="ink"。"""
+    ink_rhythm = _CFG.resolve_style(style, ink_rhythm)
     L = spec.get("layout") or {}
     F = spec.get("font_design") or {}
     M = spec.get("morph") or {}
@@ -53,21 +59,37 @@ def brief(spec, text, orientation="横版"):
             parts.append(D._clean(F["stroke"]))
     else:
         parts.append(f"画面上写「{text}」这一整句，一字不少、不要标点，整句读得出、不许缺字")
-        parts.append("毛笔在纸上快速挥写的整幅狂草，不是马克笔、秀丽笔或现代文艺体，"
-                     "整组以细劲线条为绝对主调、笔画瘦而利，不要实心填充、不要粗细均匀的光滑笔画、不要圆润粗壮的设计字体")
+        if ink_rhythm:
+            parts.append("毛笔在纸上快速挥写的整幅狂草，不是马克笔、秀丽笔或现代文艺体，"
+                         "整组以细劲线条为主，但提按分明：重按处铺开成较宽的实笔，提起处收成细线，"
+                         "不要整组一样细、不要粗细均匀的光滑笔画、不要圆润粗壮的设计字体")
+        else:
+            parts.append("毛笔在纸上快速挥写的整幅狂草，不是马克笔、秀丽笔或现代文艺体，"
+                         "整组以细劲线条为绝对主调、笔画瘦而利，不要实心填充、不要粗细均匀的光滑笔画、不要圆润粗壮的设计字体")
         parts.append("字与字大胆缠绕连写：上字收笔直接牵出细丝连到下字起笔，多字可以一笔连写、牵丝不断，"
                      "看得见的细牵丝把整组连成一条连绵气脉，允许连写简化、字与字挨近呼应、互相穿插，"
                      "不要写成一个个分开的字，只要整句读得出即可")
-        parts.append("大量干笔飞白：笔毫散开干扫，部分笔画甚至整字由一组平行细丝组成、中间大量露出背景，"
-                     "边缘毛涩断续；干丝依然是字的颜色、明亮，不发灰发黑")
+        if ink_rhythm:
+            parts.append("大量干笔飞白：笔毫散开干扫，部分笔画甚至整字由一组平行细丝组成、中间大量露出背景，"
+                         "边缘毛涩断续；干丝比湿笔更浅、更透，是同一字色的淡墨，不是灰糊、不是黑块")
+        else:
+            parts.append("大量干笔飞白：笔毫散开干扫，部分笔画甚至整字由一组平行细丝组成、中间大量露出背景，"
+                         "边缘毛涩断续；干丝依然是字的颜色、明亮，不发灰发黑")
+        if ink_rhythm:
+            parts.extend(INK_RHYTHM_LINES)
         if F.get("cursive_flow"):
             parts.append(D._clean(F["cursive_flow"]))
         if F.get("stroke"):
             parts.append(D._clean(F["stroke"]))
         parts.append("字势倾斜、大小欹侧、疏密肆意，主字放大、虚词小而细，整组不要一样大")
-        parts.append("字色铁律：字色必须和它所在那块背景有肉眼可辨的明度差——背景偏亮就把字压成深墨色"
-                     "（干净的墨，不是发灰的墨团），背景偏暗就用亮白浅色；不论哪一种，最宽的一笔和细游丝同色同亮，"
-                     "宽只是形状铺开，不许出现灰糊的墨团、灰字")
+        if ink_rhythm:
+            parts.append("字色铁律：字色必须和它所在那块背景有肉眼可辨的明度差——背景偏亮时用该字色的深色版本，背景偏暗时用该字色的浅色版本；"
+                         "重按处是同一色相更浓、更厚实，提起处是同一色相更淡、更透，最浓处仍透出飞白；"
+                         "不许糊成一整块，也不许出现灰糊墨团或第二种颜色")
+        else:
+            parts.append("字色铁律：字色必须和它所在那块背景有肉眼可辨的明度差——背景偏亮就把字压成深墨色"
+                         "（干净的墨，不是发灰的墨团），背景偏暗就用亮白浅色；不论哪一种，最宽的一笔和细游丝同色同亮，"
+                         "宽只是形状铺开，不许出现灰糊的墨团、灰字")
         if L.get("emphasis"):
             parts.append(D._clean(L["emphasis"]))
         if L.get("scale"):
@@ -79,9 +101,15 @@ def brief(spec, text, orientation="横版"):
     parts.append(f"字压在{pos}，整组字明显收小、缩成画面中部一小块，上下左右都留出大片空白，画面以空为主、不要撑大")
 
     if C.get("name"):
-        parts.append(f"整组字统一为一个颜色（{C['name']}；如果这个颜色和所在背景明度太接近、字读不出来，"
-                     "就自动压深或提亮到清晰可辨，仍然只有一个颜色），"
-                     "深色只是飞白阴影、不是字色，不许出现灰糊的墨团或第二种颜色")
+        if ink_rhythm:
+            parts.append(f"整组字统一为一个颜色（{C['name']}；如果这个颜色和所在背景明度太接近、字读不出来，"
+                         "就自动压深或提亮到清晰可辨，仍然只有一个颜色），"
+                         "浓淡只在这个颜色内部变化：重按处同色更浓、更厚实，提起处同色更淡、更透，最浓处仍透出飞白，"
+                         "不许出现灰糊墨团或第二种颜色")
+        else:
+            parts.append(f"整组字统一为一个颜色（{C['name']}；如果这个颜色和所在背景明度太接近、字读不出来，"
+                         "就自动压深或提亮到清晰可辨，仍然只有一个颜色），"
+                         "深色只是飞白阴影、不是字色，不许出现灰糊的墨团或第二种颜色")
     if C.get("relation"):
         parts.append(D._clean(C["relation"]))
 
@@ -179,14 +207,14 @@ def _wf(prompt, seed, w, h, prefix, ref):
     }
 
 
-def render(text, hint="", seed=0, size=(1536, 864), use_cache=True, font="cursive"):
+def render(text, hint="", seed=0, size=(1536, 864), use_cache=True, font="cursive", ink_rhythm=False, style=None):
     spec = D.direct(text, hint, use_cache=use_cache)
     if spec.get("error"):
         print("[director fail]", spec["error"])
         return None, spec, ""
     seed = seed or int(time.time()) % 1000000
     ref, _ = TPLS.get(font, TPLS["cursive"])
-    p = brief(spec, text, _orient(size))
+    p = brief(spec, text, _orient(size), ink_rhythm=ink_rhythm, style=style)
     print("[prompt]", p)
     fn, sub = _run(_wf(p, seed, size[0], size[1], f"single_{seed}", ref))
     if not fn:
@@ -197,10 +225,10 @@ def render(text, hint="", seed=0, size=(1536, 864), use_cache=True, font="cursiv
     return dst, spec, p
 
 
-def _render_with_spec(spec, text, seed, size, font="cursive"):
+def _render_with_spec(spec, text, seed, size, font="cursive", ink_rhythm=False, style=None):
     """用同一份规格、指定 seed 出一张图，返回 (dst, prompt)。"""
     ref, _ = TPLS.get(spec.get("ref_style", font), TPLS["cursive"])
-    p = brief(spec, text, _orient(size))
+    p = brief(spec, text, _orient(size), ink_rhythm=ink_rhythm, style=style)
     fn, sub = _run(_wf(p, seed, size[0], size[1], f"single_{seed}", ref))
     if not fn:
         return None, p
@@ -209,7 +237,7 @@ def _render_with_spec(spec, text, seed, size, font="cursive"):
     return dst, p
 
 
-def stable_render(text, hint="", max_tries=1, size=(1536, 864), use_cache=True, font="cursive"):
+def stable_render(text, hint="", max_tries=1, size=(1536, 864), use_cache=True, font="cursive", ink_rhythm=False, style=None):
     """直接出图（出图已稳定，默认不再做 Ollama 自检）。
     经过多轮压力测试，单次出图本身已稳定、字完整；而出图后立即调用 35b 自检，
     每次都撞显存竞争 500、要等待重试，反而增加耗时和模型换入换出，故默认关闭。
@@ -223,7 +251,7 @@ def stable_render(text, hint="", max_tries=1, size=(1536, 864), use_cache=True, 
                     status="failed", missing=[], reliable=False)
     seed = int(time.time()) % 1000000
     print(f"[直接出图 · seed {seed}，不做 Ollama 自检]")
-    dst, p = _render_with_spec(spec, text, seed, size, font)
+    dst, p = _render_with_spec(spec, text, seed, size, font, ink_rhythm=ink_rhythm, style=style)
     if not dst:
         print("出图失败")
         return dict(dst=None, spec=spec, prompt="", attempts=0,
@@ -232,8 +260,20 @@ def stable_render(text, hint="", max_tries=1, size=(1536, 864), use_cache=True, 
                 status="rendered", missing=[], reliable=False)
 
 
+def stable_render_neat(text, hint="", **kwargs):
+    """整齐版接口：等价于 style="neat"。"""
+    kwargs["style"] = C.STYLE_NEAT
+    return stable_render(text, hint, **kwargs)
+
+
+def stable_render_ink(text, hint="", **kwargs):
+    """浓淡版接口：等价于 style="ink"。"""
+    kwargs["style"] = C.STYLE_INK
+    return stable_render(text, hint, **kwargs)
+
+
 def render_set(text, hint="", k=4, seed_base=0, size=(1536, 864),
-               use_cache=True, font="cursive"):
+               use_cache=True, font="cursive", ink_rhythm=False, style=None):
     """一次出 k 套不同方案：导演先给 k 份互不相同的规格，再一套套出图。
     这是「四张几乎一样」的解药——差异来自规格本身，不是同一份规格换种子。"""
     specs = D.combo(text, hint, k=k, use_cache=use_cache)
@@ -245,7 +285,7 @@ def render_set(text, hint="", k=4, seed_base=0, size=(1536, 864),
     for i, spec in enumerate(specs):
         seed = seed_base + i * 419
         ref, _ = TPLS.get(spec.get("ref_style", "cursive"), TPLS["cursive"])
-        p = brief(spec, text, _orient(size))
+        p = brief(spec, text, _orient(size), ink_rhythm=ink_rhythm, style=style)
         print(f"\n[方案{i + 1} · {spec.get('label')} · seed {seed}]\n{p}")
         fn, sub = _run(_wf(p, seed, size[0], size[1], f"set_{seed}", ref))
         if not fn:
@@ -256,10 +296,10 @@ def render_set(text, hint="", k=4, seed_base=0, size=(1536, 864),
     return outs
 
 
-def render_one(text, spec, seed, size=(1536, 864)):
+def render_one(text, spec, seed, size=(1536, 864), ink_rhythm=False, style=None):
     """用指定的一份规格再出一张（挑中方案后换种子细化，规格不变）"""
     ref, _ = TPLS.get(spec.get("ref_style", "heavy"), TPLS["heavy"])
-    p = brief(spec, text, _orient(size))
+    p = brief(spec, text, _orient(size), ink_rhythm=ink_rhythm, style=style)
     fn, sub = _run(_wf(p, seed, size[0], size[1], f"ref_{seed}", ref))
     if not fn:
         return None
@@ -276,11 +316,19 @@ if __name__ == "__main__":
     ap.add_argument("--font", default="cursive", choices=list(TPLS))
     ap.add_argument("--fresh", action="store_true")
     ap.add_argument("--stable", action="store_true", help="直接出图（默认不做 Ollama 自检）")
+    ap.add_argument("--style", choices=list(C.STYLES), default=None,
+                    help="版式：neat 整齐版（默认）/ ink 浓淡版")
+    ap.add_argument("--ink-rhythm", action="store_true",
+                    help="旧写法，等价于 --style ink")
     ap.add_argument("--tries", type=int, default=1)
     a = ap.parse_args()
+    if a.ink_rhythm and a.style == C.STYLE_NEAT:
+        ap.error("--ink-rhythm 等价于 --style ink，不能同时指定 --style neat")
+    style = a.style or (C.STYLE_INK if a.ink_rhythm else C.DEFAULT_STYLE)
     if a.stable:
         r = stable_render(a.text, a.hint, max_tries=a.tries,
-                          size=(1536, 864), use_cache=not a.fresh, font=a.font)
+                          size=(1536, 864), use_cache=not a.fresh, font=a.font,
+                          style=style)
         print("\n===== 出图结果 =====")
         print("文件:", r["dst"])
         print("状态:", {"rendered": "直接出图（未自检）", "passed": "质检通过",
@@ -288,4 +336,5 @@ if __name__ == "__main__":
         if r["missing"]:
             print("疑似缺字:", "".join(r["missing"]))
     else:
-        render(a.text, a.hint, a.seed, (1536, 864), use_cache=not a.fresh, font=a.font)
+        render(a.text, a.hint, a.seed, (1536, 864), use_cache=not a.fresh, font=a.font,
+               style=style)

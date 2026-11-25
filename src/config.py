@@ -75,6 +75,41 @@ ISOMORPH_DOC = os.path.join(REFERENCES_DIR, "isomorph.md")
 SIGMAS = "1.0, 0.978453, 0.95418, 0.926626, 0.89508, 0.845148, 0.704534, 0.414568, 0"
 NEGATIVE_PROMPT = "黑字、黑色笔画、暗字、笔画变黑、实心黑块、字发灰、墨团、墨块、脏污"
 
+# ---- 两个版式接口 ---------------------------------------------------------
+# neat：v0.1.0 的整齐版，细劲、干净、整组同亮度；默认。
+# ink： 浓淡版，提按与同色浓淡；可选分支，默认不替换 neat。
+STYLE_NEAT = "neat"
+STYLE_INK = "ink"
+STYLES = (STYLE_NEAT, STYLE_INK)
+STYLE_LABELS = {STYLE_NEAT: "整齐版", STYLE_INK: "浓淡版"}
+DEFAULT_STYLE = STYLE_NEAT
+
+
+def resolve_style(style=None, ink_rhythm=False):
+    """把 style / 旧 ink_rhythm 参数归一成一个布尔值。
+
+    显式 style 优先：style="neat" 就是整齐版，不受旧 ink_rhythm=True 影响；
+    只有 style=None 时才回退到旧开关与 DEFAULT_STYLE。"""
+    if style is None:
+        return bool(ink_rhythm) or DEFAULT_STYLE == STYLE_INK
+    if style not in STYLES:
+        raise ValueError("unknown style: %s (expect neat|ink)" % style)
+    return style == STYLE_INK
+
+
+# 浓淡版（style=ink）的提按与浓淡层次；整齐版（默认）不追加。
+# 不写「浓墨/重墨」——实测这类词会直接诱导黑字；用形状与明暗关系描述。
+INK_RHYTHM_LINES = (
+    "提按要看得见：起笔重按、铺开成一小块更实的笔画，行笔提起收成细线，收笔再压出枯笔；"
+    "同一字里同时有粗重、细劲、干枯三种笔触，每个字内部都要有至少一处重按、一处提起，"
+    "不是整组一样粗、一样湿、一样亮，也不是只把首字加重、其余字统一变细",
+    "浓淡要看得见：重按处仍是原来的字色、只是更浓更厚实，提起处是同一颜色的淡层、透出背景，"
+    "枯笔处只剩断续干丝；同一笔从浓到淡、从重到轻，不许整幅字一个明度、一个粗细",
+    "重按只是同一色相的浓色，不是换色；最浓处仍透出飞白与纸纹，不许糊成一整块或灰糊墨团。"
+    "每个字只压重一到两笔，重笔分散在不同字里，其余笔画保持细劲；"
+    "整组字的整体浓度要接近，不要一个字极重、其余字极淡",
+)
+
 
 # ---- 书写视频（可选功能，只在显式运行 write_video.py 时用到，主流程不调用）----
 # MiniMax H3 的 8 步蒸馏版及其配套 VAE/文本编码器；需要 ComfyUI 0.45+ 自带的

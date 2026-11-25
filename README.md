@@ -106,13 +106,34 @@ python src/preflight.py --fix    # 自动建目录、同步笔法参考图
 ### 3. 出图
 
 ```bash
-python src/run.py 惊蛰                      # 横版单张
+python src/run.py 惊蛰                      # 横版单张（整齐版）
 python src/run.py 末班地铁 --vertical        # 竖版
 python src/run.py 凡尘 --combo 4             # 一次出 4 套方案
 python src/run.py 标题 --base 照片.jpg        # 底图重绘
 python src/run.py 试水 --alpha               # 透明字层
 python src/run.py 落霞孤鹜 --subtitle         # 加拼音副标（默认不出）
+python src/run.py 惊蛰 --style ink           # 浓淡版：字内提按、同色浓淡
+python src/run.py 稻花香里说丰年 --base web_rice.png --style ink
 ```
+
+两种版式接口，按需选：
+
+| `--style` | 版式 | 特征 |
+|---|---|---|
+| `neat`（默认） | 整齐版 | 细劲、缠绕、整组同亮度，长句最稳 |
+| `ink` | 浓淡版 | 字内提按、重按同色更浓、干笔更透；更像真迹 |
+
+`--ink-rhythm` 保留为旧写法，等价于 `--style ink`；两者冲突（`--ink-rhythm --style neat`）会直接报错。浓淡版目前 5 组 A/B（2/4/7/10/18 字）里短句和 18 字更稳，7 字金色案例可能出现首字过重、其余字偏淡。**默认仍是整齐版**，浓淡版建议先小批量试；要改全局默认，只改 `src/config.py` 的 `DEFAULT_STYLE = STYLE_INK` 一处。
+
+Python 侧同样是两个明确入口：
+
+```python
+from single import stable_render_neat, stable_render_ink
+stable_render_neat("惊蛰")            # 整齐版
+stable_render_ink("惊蛰")             # 浓淡版
+```
+
+重绘、透明字与批量入口共用 `style="neat" | "ink"` 参数，旧 `ink_rhythm=True` 继续兼容。
 
 成片默认存到 ComfyUI 的 `output/projects/title_generator`，可用 `TG_SAVE_DIR` 覆盖。
 
@@ -125,7 +146,7 @@ python workbench/server.py
 
 ![工作台](docs/assets/workbench.jpg)
 
-三条产线并排、一行一句批量入队、拼音先核对再出图、本机历史成图可搜索可续画（数量取决于 `SAVE_DIR`）。工作台通过 `TG_SKILL_ROOT` 定位本仓库，默认就是仓库根目录。
+三条产线并排、一行一句批量入队、拼音先核对再出图、「墨版」可选整齐版 / 浓淡版、本机历史成图可搜索可续画（数量取决于 `SAVE_DIR`）。工作台通过 `TG_SKILL_ROOT` 定位本仓库，默认就是仓库根目录。
 
 ## 它是怎么做的
 
@@ -154,7 +175,7 @@ Qwen-Image 2.1 turbo（8 步）        照着设计书渲染
 - **封闭式逐字核对**：只让 35B 判断“在 / 不在”，不让它自由 OCR；
 - **书写视频默认不调用**：MiniMax H3 能一笔一笔写出来，但要额外 44 GB 权重、单条 110–122 s、约 1/4 概率重跑。
 
-更完整的架构说明见 [docs/architecture.md](docs/architecture.md)；19 章研发记录（含全部失败实验）见 [docs/dev-log.md](docs/dev-log.md)。
+更完整的架构说明见 [docs/architecture.md](docs/architecture.md)；21 章研发记录（含全部失败实验）见 [docs/dev-log.md](docs/dev-log.md)。
 
 ## 仓库结构
 
@@ -167,7 +188,7 @@ calligraphy-title-poster/
 ├── examples/             # 12 张示例成图（压缩版）
 ├── benchmark/
 │   └── results.csv       # 14 例逐条验收数据
-├── docs/                 # 架构、模型清单、测试设计、19 章研发记录、社交预览图
+├── docs/                 # 架构、模型清单、测试设计、21 章研发记录、社交预览图
 ├── requirements.txt
 ├── LICENSE               # Apache-2.0（仅覆盖本仓库代码）
 └── NOTICE                # 模型与第三方许可边界

@@ -21,24 +21,39 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import config as C
+from config import INK_RHYTHM_LINES
 import comfy_client as CC
 
 DEFAULT_COLOR = "#EDE3D2"  # 暖米白，叠深底好看且亚光
 
 
-def alpha_prompt(text):
-    """透明背景专用提示词：只写字、其余区域 alpha=0。"""
+def alpha_prompt(text, ink_rhythm=False, style=None):
+    """透明背景专用提示词：只写字、其余区域 alpha=0。
+
+    style="neat" 为整齐版（默认），style="ink" 为浓淡版；
+    ink_rhythm=True 是旧写法，等价于 style="ink"。"""
+    ink_rhythm = C.resolve_style(style, ink_rhythm)
     n = len(text)
-    return (
+    if ink_rhythm:
+        stroke = ("整组仍以细劲线条为主，只在少数笔画上重按铺开，其余保持细线；"
+                  "大量干笔飞白，字与字缠绕连写、牵丝不断，")
+        color = ("字是亚光暖米白色，所有笔画仍是这同一个颜色，浓淡由 alpha 承载：重按处更浓、提起处更透，")
+    else:
+        stroke = "细劲线条为绝对主调、笔画瘦而利、大量干笔飞白，字与字缠绕连写、牵丝不断，"
+        color = "字是亚光暖米白色，所有笔画包括最细的飞白细丝都是这同一个颜色，"
+    p = (
         "一张背景完全透明的 PNG 毛笔书法字，画面里只有「" + text + "」，除此之外什么都没有："
         "没有场景、没有纸张、没有底色、没有边框、没有投影、没有光晕，所有非笔画区域都是完全透明的空 alpha 通道、alpha 等于 0。"
         "毛笔快速挥写的整幅狂草，恰好 " + str(n) + " 个字、一字不少也不多写、不重复任何字，"
-        "细劲线条为绝对主调、笔画瘦而利、大量干笔飞白，字与字缠绕连写、牵丝不断，"
+        + stroke +
         "字势倾斜、大小欹侧、主次分明。"
-        "字是亚光暖米白色，所有笔画包括最细的飞白细丝都是这同一个颜色，"
+        + color +
         "不发光、不描边、不立体、不出现第二种颜色。"
         "输出带 alpha 通道的 RGBA 透明 PNG，透明背景由 alpha 通道承载。"
     )
+    if ink_rhythm:
+        p += "。".join(INK_RHYTHM_LINES) + "。"
+    return p
 
 
 def _rgb(hexstr):
@@ -91,10 +106,10 @@ def _wf_alpha(prompt, seed, w, h, prefix, ref):
     }
 
 
-def generate(text, seed=0, size=(1536, 864), color=DEFAULT_COLOR, font="cursive", dry=False):
+def generate(text, seed=0, size=(1536, 864), color=DEFAULT_COLOR, font="cursive", dry=False, ink_rhythm=False, style=None):
     """生成透明背景文字层。返回 dict(dst/seed/color/status)。"""
     seed = seed or int(time.time()) % 1000000
-    p = alpha_prompt(text)
+    p = alpha_prompt(text, ink_rhythm=ink_rhythm, style=style)
     if dry:
         return dict(dst=None, prompt=p, seed=seed, color=color, status="dry")
 
@@ -127,7 +142,14 @@ if __name__ == "__main__":
     ap.add_argument("--color", default=DEFAULT_COLOR, help="字色 hex，默认暖米白")
     ap.add_argument("--font", default="cursive", choices=list(C.TPLS))
     ap.add_argument("--dry", action="store_true")
+    ap.add_argument("--style", choices=list(C.STYLES), default=None,
+                    help="版式：neat 整齐版（默认）/ ink 浓淡版")
+    ap.add_argument("--ink-rhythm", action="store_true",
+                    help="旧写法，等价于 --style ink")
     a = ap.parse_args()
+    if a.ink_rhythm and a.style == C.STYLE_NEAT:
+        ap.error("--ink-rhythm 等价于 --style ink，不能同时指定 --style neat")
+    style = a.style or (C.STYLE_INK if a.ink_rhythm else C.DEFAULT_STYLE)
     w, h = (int(x) for x in a.size.lower().split("x"))
-    r = generate(a.text, a.seed, (w, h), a.color, a.font, a.dry)
+    r = generate(a.text, a.seed, (w, h), a.color, a.font, a.dry, style=style)
     print("\n[结果]", r["status"], r.get("dst") or "")

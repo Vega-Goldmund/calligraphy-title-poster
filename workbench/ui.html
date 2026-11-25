@@ -280,7 +280,13 @@ details[open] summary::after{content:"－"}
   </section>
 
   <section class="sec">
-    <p class="kicker"><span class="no">05</span><em>副标</em>SUBTITLE</p>
+    <p class="kicker"><span class="no">05</span><em>墨版</em>INK STYLE</p>
+    <div class="chips" id="inkStyleChips"></div>
+    <p class="note">整齐版：笔画细劲、整组同亮度，最稳。浓淡版：字内提按、重按同色更浓；长句偶有首字偏重。</p>
+  </section>
+
+  <section class="sec">
+    <p class="kicker"><span class="no">06</span><em>副标</em>SUBTITLE</p>
     <div class="opt">
       <span class="lab">加一行拼音副标</span>
       <span class="sw" id="swSub"></span>
@@ -297,7 +303,7 @@ details[open] summary::after{content:"－"}
   </section>
 
   <section class="sec">
-    <p class="kicker"><span class="no">06</span><em>专属</em>ROUTE OPTIONS</p>
+    <p class="kicker"><span class="no">07</span><em>专属</em>ROUTE OPTIONS</p>
 
     <div id="optSingle">
       <div class="opt"><span class="lab">方案数</span>
@@ -340,7 +346,7 @@ details[open] summary::after{content:"－"}
   </section>
 
   <section class="sec">
-    <p class="kicker"><span class="no">07</span><em>高级</em>ADVANCED</p>
+    <p class="kicker"><span class="no">08</span><em>高级</em>ADVANCED</p>
     <details class="adv">
       <summary>种子 · 缓存 · 后处理</summary>
       <div class="advbody">
@@ -472,21 +478,23 @@ const ago=t=>{const s=Math.floor(Date.now()/1000-t);if(s<60)return s+"s";if(s<36
 
 const SIZES=[[1536,864,"横 16:9"],[1920,1080,"横 1080p"],[864,1536,"竖 9:16"],[1080,1920,"竖 1080p"],[1080,1080,"方 1:1"]];
 const STYLES=[["cursive","细瘦狂草","caoshu_ref3.png"],["heavy","重墨","font_heavy_0.jpg"],["dry","枯笔","font_dry_0.jpg"]];
+const INK_STYLES=[["neat","整齐版"],["ink","浓淡版"]];
 const COLORS=["#EDE3D2","#F7F3E8","#1B1A17","#96682C","#9A3B30","#6F7F6B"];
 
 const S={route:"single",jobs:[],env:null,latest:null,items:[],filter:"",q:"",
-  alphaBg:"dark",view:null,logId:null,font:"cursive",size:[1536,864],
+  alphaBg:"dark",view:null,logId:null,font:"cursive",inkStyle:"neat",size:[1536,864],
   mode:"recompose",color:"#EDE3D2",sub:false,tones:true,cache:true,
   cmp:{pos:"mc",scale:0.72}};
 
 /* ---------- 表单持久化 ---------- */
 const FKEYS=["text","hint","wIn","hIn","seed","subEn","vidPoster","vidBase","vidPlate"];
 function saveForm(){const o={};FKEYS.forEach(k=>o[k]=$("#"+k).value);
-  o.route=S.route;o.font=S.font;o.size=S.size;o.sub=S.sub;o.tones=S.tones;o.cache=S.cache;
+  o.route=S.route;o.font=S.font;o.inkStyle=S.inkStyle;o.size=S.size;o.sub=S.sub;o.tones=S.tones;o.cache=S.cache;
   o.color=S.color;o.mode=S.mode;localStorage.setItem("wb_form",JSON.stringify(o));}
 function loadForm(){try{const o=JSON.parse(localStorage.getItem("wb_form")||"{}");
   FKEYS.forEach(k=>{if(o[k]!=null)$("#"+k).value=o[k];});
   if(o.route)setRoute(o.route,0);if(o.font)setFont(o.font,0);
+  if(o.inkStyle)setInkStyle(o.inkStyle,0);
   if(o.size)setSize(o.size[0],o.size[1],0);
   if(o.sub)setSub(true,0);if(o.tones===false)setTones(false,0);if(o.color)setColor(o.color,0);
   if(o.mode)setMode(o.mode,0);
@@ -512,6 +520,17 @@ function buildStyles(){
   setFont(S.font,0);
 }
 function setFont(k,save=1){S.font=k;$$("#styleChips .sty").forEach(b=>b.classList.toggle("on",b.dataset.k===k));if(save)saveForm();}
+function buildInkStyles(){
+  $("#inkStyleChips").innerHTML=INK_STYLES.map(([k,n])=>
+    `<span class="chip" data-k="${k}">${n}</span>`).join("");
+  $$("#inkStyleChips .chip").forEach(c=>c.onclick=()=>setInkStyle(c.dataset.k));
+  setInkStyle(S.inkStyle,0);
+}
+function setInkStyle(k,save=1){
+  S.inkStyle=k==="ink"?"ink":"neat";
+  $$("#inkStyleChips .chip").forEach(c=>c.classList.toggle("on",c.dataset.k===S.inkStyle));
+  if(save)saveForm();
+}
 function buildColors(){
   $("#colorChips").innerHTML=COLORS.map(c=>`<span class="chip" data-c="${c}" style="background:${c};width:30px;height:26px;padding:0;border-color:#b9a986"></span>`).join("");
   $$("#colorChips .chip").forEach(b=>b.onclick=()=>setColor(b.dataset.c));
@@ -623,10 +642,12 @@ function showJob(j){
   S.latest=j;
   if(!j||!j.dst){return;}
   const size=j.params&&j.params.size?j.params.size.join("×"):"—";
+  const ink=j.params&&j.params.style?({neat:"整齐版",ink:"浓淡版"}[j.params.style]||j.params.style):"";
   setStage({path:j.dst,view:true,name:j.dst.split("\\").pop()},j.text,
     `<span class="m">产线</span><span>${j.route==="single"?"文生图":j.route==="redraw"?"底图重绘":j.route==="alpha"?"透明字":"书写视频"}</span>
      <span class="m">种子</span><span>${fmtN(j.seed)}</span>
      <span class="m">尺寸</span><span>${size}</span>
+     ${ink?`<span class="m">墨版</span><span>${ink}</span>`:""}
      <span class="m">耗时</span><span>${j.seconds?j.seconds+" 秒":"—"}</span>`);
   $("#logbox").classList.add("show");
   loadLog(j.id);
@@ -702,7 +723,7 @@ async function lbAction(a){
 
 /* ---------- 任务 ---------- */
 function params(){
-  const p={size:S.size,font:S.font,seed:parseInt($("#seed").value||0)||0,
+  const p={size:S.size,font:S.font,style:S.inkStyle,seed:parseInt($("#seed").value||0)||0,
     hint:$("#hint").value.trim(),sub:S.sub,noTones:!S.tones,subEn:$("#subEn").value.trim(),
     cache:S.cache,film:S.film,verify:S.verify,combo:parseInt($("#combo").value||1)};
   if(S.route==="redraw"){p.base=S.base||"";p.mode=S.mode;p.denoise=parseFloat($("#denoise").value);p.dignified=S.dign;}
@@ -865,7 +886,7 @@ $("#lb").onclick=e=>{if(e.target.id==="lb")closeLB();};
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeLB();});
 
 /* ---------- 启动 ---------- */
-buildSizes();buildStyles();buildColors();loadForm();
+buildSizes();buildStyles();buildInkStyles();buildColors();loadForm();
 $("#denTxt").textContent=(+$("#denoise").value).toFixed(2);
 if(!$("#text").value)$("#text").value="人间值得";
 onText();previewPinyin();setSize(S.size[0],S.size[1],0);
